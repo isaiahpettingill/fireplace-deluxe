@@ -5,16 +5,10 @@ A cozy fireplace in your terminal, now ported to Rust
 
 ## Build and Run
 
-### Rust version (Recommended)
+### Build and Run
 * Install [Rust](https://www.rust-lang.org/tools/install)
 * `cargo build --release`
 * `./target/release/fireplace`
-
-### Original C version
-* Install ncurses
-    * Including the development packages (usually called libncurses5-dev or something similar)
-* `make`
-* `./fireplace`
 
 ### Options
 ```
