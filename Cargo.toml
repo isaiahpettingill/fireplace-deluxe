@@ -1,0 +1,12 @@
+[package]
+name = "fireplace"
+version = "0.1.0"
+edition = "2021"
+description = "A cozy fireplace in your terminal"
+authors = ["Wyatt Sheffield"]
+license = "MIT"
+
+[dependencies]
+crossterm = "0.27"
+clap = { version = "4.4", features = ["derive"] }
+rand = "0.8"

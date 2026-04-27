@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -O3
+CFLAGS = -O3 -static
 LNFLAGS = -lncurses
 DESTDIR ?= $(HOME)/bin
 EXEC = fireplace
