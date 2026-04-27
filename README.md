@@ -1,10 +1,16 @@
 # Fireplace
-A cozy fireplace in your terminal
+A cozy fireplace in your terminal, now ported to Rust
 
 ![A gif of what to expect](demo.gif?raw=true "Cozy")
 
 ## Build and Run
 
+### Rust version (Recommended)
+* Install [Rust](https://www.rust-lang.org/tools/install)
+* `cargo build --release`
+* `./target/release/fireplace`
+
+### Original C version
 * Install ncurses
     * Including the development packages (usually called libncurses5-dev or something similar)
 * `make`
