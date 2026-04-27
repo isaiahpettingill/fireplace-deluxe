@@ -4,7 +4,7 @@ use crossterm::{
     event::{self, Event, KeyCode, KeyEvent},
     style::{Color, Print, SetForegroundColor},
     terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
-    execute,
+    execute, queue,
 };
 use std::env;
 use rand::Rng;
@@ -119,9 +119,14 @@ fn start_crossterm() -> io::Result<(usize, usize)> {
     let height = rows as usize;
 
     // Detect terminal color support
-    let use_256 = env::var("TERM")
-        .map(|term| term.contains("256color") || term.contains("truecolor"))
-        .unwrap_or(false);
+    let use_256 = if env::consts::OS == "windows" {
+        // Windows 10+ terminals (Windows Terminal, Console Host) support 256 colors
+        true
+    } else {
+        env::var("TERM")
+            .map(|term| term.contains("256color") || term.contains("truecolor"))
+            .unwrap_or(false)
+    };
 
     unsafe {
         if use_256 {
@@ -277,7 +282,7 @@ fn printframe(
         for j in 0..width {
             let cell = field.idx(i, j);
             if cell == 0 {
-                execute!(stdout, cursor::MoveTo(j as u16, i as u16), Print(' '))?;
+                queue!(stdout, cursor::MoveTo(j as u16, i as u16), Print(' '))?;
             } else {
                 let color_idx = min(palette_sz as i32, (palette_sz as i32 * cell / maxtemp) + 1) as usize;
 
@@ -305,7 +310,7 @@ fn printframe(
                     dispch
                 };
 
-                execute!(
+                queue!(
                     stdout,
                     cursor::MoveTo(j as u16, i as u16),
                     SetForegroundColor(color),
