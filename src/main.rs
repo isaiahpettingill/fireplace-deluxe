@@ -71,7 +71,7 @@ impl CaGrid {
 #[command(version, about = "A cozy fireplace in your terminal", long_about = None)]
 struct Args {
     /// An ASCII character to draw the flames. Default is '@'
-    #[arg(short = 'c', default_value = "@", conflicts_with_all = ["use_cool_unicode", "chinese"])]
+    #[arg(short = 'c', default_value = "@", conflicts_with_all = ["use_cool_unicode"])]
     character: String,
 
     /// Set the framerate in frames/sec. Default is 20
@@ -95,12 +95,12 @@ struct Args {
     no_background: bool,
 
     /// Use decorative unicode (1: 🮿, 2: 𜵯, 3: 🮋, 4: 𜺏)
-    #[arg(short = 'u', long, value_name = "NUM", num_args = 0..=1, default_missing_value = "1", default_value = "")]
-    use_cool_unicode: Option<String>,
+    #[arg(short = 'u', long = "use-cool-unicode")]
+    use_cool_unicode: bool,
 
-    /// Use Chinese character 炎
-    #[arg(long)]
-    chinese: bool,
+    /// Unicode character number (1-4)
+    #[arg(short = 'n', long = "unicode-num", default_value = "1")]
+    unicode_num: u8,
 }
 
 // Global state
@@ -553,20 +553,14 @@ fn flames(
 fn main() -> io::Result<()> {
     let args = Args::parse();
 
-    let dispch = if let Some(ref val) = args.use_cool_unicode {
-        if !val.is_empty() {
-            match val.parse::<u8>().unwrap_or(1) {
-                1 => '🮿',
-                2 => '𜵯',
-                3 => '🮋',
-                4 => '𜺏',
-                _ => '🮿',
-            }
-        } else {
-            '🮿'
+    let dispch = if args.use_cool_unicode {
+        match args.unicode_num {
+            1 => '🮿',
+            2 => '𜵯',
+            3 => '🮋',
+            4 => '𜺏',
+            _ => '🮿',
         }
-    } else if args.chinese {
-        '炎'
     } else {
         args.character.chars().next().unwrap_or('@')
     };
