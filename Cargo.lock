@@ -146,7 +146,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fireplace"
+name = "fireplace-deluxe"
 version = "0.1.0"
 dependencies = [
  "clap",

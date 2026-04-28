@@ -1,10 +1,16 @@
 [package]
-name = "fireplace"
+name = "fireplace-deluxe"
 version = "0.1.0"
 edition = "2021"
 description = "A cozy fireplace in your terminal"
-authors = ["Wyatt Sheffield"]
+authors = ["isaiahpettingill <git.wolverine899@passfwd.com>"]
 license = "MIT"
+homepage = "https://github.com/isaiahpettingill/fireplace-deluxe"
+repository = "https://github.com/isaiahpettingill/fireplace-deluxe"
+
+[[bin]]
+name = "fireplace-deluxe"
+path = "src/main.rs"
 
 [dependencies]
 crossterm = "0.27"
