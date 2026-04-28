@@ -27,6 +27,8 @@ Usage: fireplace-deluxe [options]
         -r              Print random characters.
         --no-background Disable black background.
         -b, --background-flame  Use background colors for solid flame effect.
+        --color NAME    Color palette: red (default), blue (butane), green (copper),
+                        pink (lithium), mauve (potassium), yellow (sodium).
         -u              Use decorative unicode (╬, ╳, ░, ▞, 🮿, 𜵯, 🮋, 𜺏).
         -n NUM          Unicode character number (1-8). Default is 1.
 
