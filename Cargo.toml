@@ -26,6 +26,6 @@ name = "fireplace-deluxe"
 path = "src/main.rs"
 
 [dependencies]
-crossterm = "0.27"
+crossterm = "0.29.0"
 clap = { version = "4.4", features = ["derive"] }
-rand = "0.8"
+rand = "0.10.1"

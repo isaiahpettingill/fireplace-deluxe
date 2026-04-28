@@ -6,7 +6,7 @@ use crossterm::{
     style::{Color, Print, ResetColor, SetBackgroundColor, SetForegroundColor},
     terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use rand::Rng;
+use rand::RngExt;
 use std::env;
 use std::io::{self, Write};
 use std::time::Duration;
@@ -513,8 +513,8 @@ fn cooldown(heat: i32) -> i32 {
     if heat == 0 {
         return 0;
     }
-    let mut rng = rand::thread_rng();
-    let r = rng.gen_range(0..heat);
+    let mut rng = rand::rng();
+    let r = rng.random_range(0..heat);
     if r == 0 {
         heat - 1
     } else {
@@ -690,7 +690,7 @@ fn printframe(
                 };
 
                 let ch = if random_mode {
-                    char_list[rand::thread_rng().gen_range(0..char_list_size)]
+                    char_list[rand::rng().random_range(0..char_list_size)]
                 } else {
                     dispch
                 };
@@ -759,9 +759,9 @@ fn flames(
     let mut heater: Vec<u8> = vec![0; width];
     let mut hotplate: Vec<u8> = vec![0; width];
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     for i in 0..width {
-        heater[i] = rng.gen_range(0..2);
+        heater[i] = rng.random_range(0..2);
     }
 
     loop {
@@ -810,8 +810,8 @@ fn flames(
         wolfram(&mut heater, wolfrule);
 
         // Random heater flip
-        if rng.gen_range(0..30) == 0 {
-            heater[rng.gen_range(0..width)] ^= 0x1;
+        if rng.random_range(0..30) == 0 {
+            heater[rng.random_range(0..width)] ^= 0x1;
         }
 
         warm(&heater, &mut hotplate, maxtemp);
