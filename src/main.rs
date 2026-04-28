@@ -106,7 +106,7 @@ struct Args {
     #[arg(short = 'b', long)]
     background_flame: bool,
 
-    /// Color palette (red, blue, green, pink, mauve, yellow)
+    /// Color palette (red/Fe, blue/butane, green/Cu, pink/Li, mauve/K, yellow/Na, magnesium/white)
     #[arg(long = "color", default_value = "red")]
     color_palette: String,
 }
@@ -853,13 +853,13 @@ fn main() -> io::Result<()> {
     let no_background = args.no_background;
     let background_flame = args.background_flame;
 
-    let palette = match args.color_palette.as_str() {
-        "blue" => &PALETTE_BLUE,
-        "green" => &PALETTE_GREEN,
-        "pink" => &PALETTE_PINK,
-        "mauve" => &PALETTE_MAUVE,
-        "yellow" => &PALETTE_YELLOW,
-        "magnesium" => &PALETTE_MAGNESIUM,
+    let palette = match args.color_palette.to_lowercase().as_str() {
+        "blue" | "butane" => &PALETTE_BLUE,
+        "green" | "cu" | "copper" => &PALETTE_GREEN,
+        "pink" | "li" | "lithium" => &PALETTE_PINK,
+        "mauve" | "k" | "potassium" => &PALETTE_MAUVE,
+        "yellow" | "na" | "sodium" => &PALETTE_YELLOW,
+        "magnesium" | "white" | "mg" => &PALETTE_MAGNESIUM,
         _ => &PALETTE_RED,
     };
 
