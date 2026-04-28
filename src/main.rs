@@ -2,12 +2,12 @@ use clap::Parser;
 use crossterm::{
     cursor,
     event::{self, Event, KeyCode, KeyEvent},
+    execute, queue,
     style::{Color, Print, ResetColor, SetBackgroundColor, SetForegroundColor},
     terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
-    execute, queue,
 };
-use std::env;
 use rand::Rng;
+use std::env;
 use std::io::{self, Write};
 use std::time::Duration;
 
@@ -16,6 +16,36 @@ struct CaGrid {
     data: Vec<i32>,
     rows: usize,
     cols: usize,
+}
+
+fn is_east_asian_wide(c: char) -> bool {
+    let cp = c as u32;
+    (0x1100..=0x115F).contains(&cp)
+        || matches!(c, '\u{2329}' | '\u{232A}')
+        || (0x2E80..=0x2EFF).contains(&cp)
+        || (0x3000..=0x303F).contains(&cp)
+        || (0x3040..=0x309F).contains(&cp)
+        || (0x30A0..=0x30FF).contains(&cp)
+        || (0x3100..=0x312F).contains(&cp)
+        || (0x3130..=0x318F).contains(&cp)
+        || (0x3190..=0x319F).contains(&cp)
+        || (0x31A0..=0x31BF).contains(&cp)
+        || (0x31C0..=0x31EF).contains(&cp)
+        || (0x31F0..=0x31FF).contains(&cp)
+        || (0x3200..=0x32FF).contains(&cp)
+        || (0x3300..=0x335F).contains(&cp)
+        || (0x3370..=0x33FF).contains(&cp)
+        || (0xA000..=0xA49F).contains(&cp)
+        || (0xF900..=0xFAFF).contains(&cp)
+        || (0xFE10..=0xFE1F).contains(&cp)
+        || (0xFE30..=0xFE6F).contains(&cp)
+        || (0xFF00..=0xFF60).contains(&cp)
+        || (0xFFE0..=0xFFE6).contains(&cp)
+        || (0x1F300..=0x1F64F).contains(&cp)
+        || (0x1F680..=0x1F6FF).contains(&cp)
+        || (0x1F900..=0x1FAFF).contains(&cp)
+        || (0x2600..=0x26FF).contains(&cp)
+        || (0x2700..=0x27BF).contains(&cp)
 }
 
 impl CaGrid {
@@ -41,7 +71,7 @@ impl CaGrid {
 #[command(version, about = "A cozy fireplace in your terminal", long_about = None)]
 struct Args {
     /// An ASCII character to draw the flames. Default is '@'
-    #[arg(short = 'c', default_value = "@")]
+    #[arg(short = 'c', default_value = "@", conflicts_with_all = ["use_cool_unicode", "chinese"])]
     character: String,
 
     /// Set the framerate in frames/sec. Default is 20
@@ -63,6 +93,14 @@ struct Args {
     /// Disable black background
     #[arg(long)]
     no_background: bool,
+
+    /// Use decorative unicode (1: 🮿, 2: 𜵯, 3: 🮋, 4: 𜺏)
+    #[arg(short = 'u', long, value_name = "NUM", num_args = 0..=1, default_missing_value = "1", default_value = "")]
+    use_cool_unicode: Option<String>,
+
+    /// Use Chinese character 炎
+    #[arg(long)]
+    chinese: bool,
 }
 
 // Global state
@@ -71,14 +109,24 @@ static mut WIDTH: usize = 0;
 static mut HEIGHT: usize = 0;
 static mut HEIGHTRECORD: usize = 0;
 static mut USE_256_COLOR: bool = false;
+static mut USE_TRUECOLOR: bool = false;
 static mut X256_PALETTE: [u8; 16] = [0; 16];
+static mut WIDE_COLS: Vec<u8> = Vec::new();
 
 fn min(a: i32, b: i32) -> i32 {
-    if a < b { a } else { b }
+    if a < b {
+        a
+    } else {
+        b
+    }
 }
 
 fn max(a: i32, b: i32) -> i32 {
-    if a > b { a } else { b }
+    if a > b {
+        a
+    } else {
+        b
+    }
 }
 
 // Flip grid upside down for resize
@@ -104,22 +152,33 @@ fn resize_array(ary: &mut Vec<u8>, new_size: usize) {
     *ary = temp;
 }
 
+fn ensure_wide_cols(width: usize) {
+    #[allow(static_mut_refs)]
+    unsafe {
+        let wide_cols = &mut WIDE_COLS;
+        if wide_cols.len() < width {
+            wide_cols.resize(width, 0);
+        }
+    }
+}
+
+#[allow(static_mut_refs)]
+fn wide_cols_at(idx: usize) -> Option<&'static mut u8> {
+    unsafe {
+        let cols = &mut WIDE_COLS;
+        cols.get_mut(idx)
+    }
+}
+
 // 256-color palette for flame gradient (from C version)
 const X256: [u8; 16] = [
-    233, 52, 88, 124,
-    160, 166, 202, 208,
-    214, 220, 226, 227,
-    228, 229, 230, 231,
+    233, 52, 88, 124, 160, 166, 202, 208, 214, 220, 226, 227, 228, 229, 230, 231,
 ];
 
 // Start terminal and initialize colors
 fn start_crossterm(no_background: bool) -> io::Result<(usize, usize)> {
     let mut stdout = io::stdout();
-    if no_background {
-        execute!(stdout, EnterAlternateScreen, cursor::Hide)?;
-    } else {
-        execute!(stdout, EnterAlternateScreen, cursor::Hide, SetBackgroundColor(Color::Black))?;
-    }
+
     terminal::enable_raw_mode()?;
 
     let (cols, rows) = terminal::size()?;
@@ -128,11 +187,17 @@ fn start_crossterm(no_background: bool) -> io::Result<(usize, usize)> {
 
     // Detect terminal color support
     let use_256 = if env::consts::OS == "windows" {
-        // Windows 10+ terminals (Windows Terminal, Console Host) support 256 colors
         true
     } else {
         env::var("TERM")
             .map(|term| term.contains("256color") || term.contains("truecolor"))
+            .unwrap_or(false)
+    };
+    let use_truecolor = if env::consts::OS == "windows" {
+        true
+    } else {
+        env::var("TERM")
+            .map(|term| term.contains("truecolor") || term.contains("24bit"))
             .unwrap_or(false)
     };
 
@@ -140,13 +205,33 @@ fn start_crossterm(no_background: bool) -> io::Result<(usize, usize)> {
         if use_256 {
             USE_256_COLOR = true;
             X256_PALETTE = X256;
-            PALETTE_SZ = 15; // 16 colors minus 1 (first is background)
+            PALETTE_SZ = 15;
         } else {
             USE_256_COLOR = false;
             PALETTE_SZ = 7;
         }
+        USE_TRUECOLOR = use_truecolor;
         WIDTH = width;
         HEIGHT = height;
+        ensure_wide_cols(width);
+    }
+
+    if no_background {
+        execute!(stdout, EnterAlternateScreen, cursor::Hide)?;
+    } else if use_truecolor {
+        execute!(
+            stdout,
+            EnterAlternateScreen,
+            cursor::Hide,
+            SetBackgroundColor(Color::Rgb { r: 0, g: 0, b: 0 })
+        )?;
+    } else {
+        execute!(
+            stdout,
+            EnterAlternateScreen,
+            cursor::Hide,
+            SetBackgroundColor(Color::AnsiValue(16))
+        )?;
     }
 
     Ok((width, height))
@@ -287,28 +372,45 @@ fn printframe(
     let width = unsafe { WIDTH };
     let palette_sz = unsafe { PALETTE_SZ };
     let use_256 = unsafe { USE_256_COLOR };
+    let wide_char = is_east_asian_wide(dispch);
 
     let char_list = ['@', '#', '%', '&', '*', '+', '=', '-', '~', '^'];
     let char_list_size = char_list.len();
 
     for i in heightrecord..height {
-        for j in 0..width {
+        let mut j = 0;
+        while j < width {
             let cell = field.idx(i, j);
+
             if cell == 0 {
+                if wide_char && j + 1 < width {
+                    if let Some(slot) = wide_cols_at(j) {
+                        *slot = 0;
+                    }
+                }
                 if no_background {
                     queue!(stdout, cursor::MoveTo(j as u16, i as u16), Print(' '))?;
                 } else {
-                    queue!(stdout, cursor::MoveTo(j as u16, i as u16), SetBackgroundColor(Color::Black), Print(' '))?;
+                    let bg = if unsafe { USE_TRUECOLOR } {
+                        Color::Rgb { r: 0, g: 0, b: 0 }
+                    } else {
+                        Color::AnsiValue(16)
+                    };
+                    queue!(
+                        stdout,
+                        cursor::MoveTo(j as u16, i as u16),
+                        SetBackgroundColor(bg),
+                        Print(' ')
+                    )?;
                 }
             } else {
-                let color_idx = min(palette_sz as i32, (palette_sz as i32 * cell / maxtemp) + 1) as usize;
+                let color_idx =
+                    min(palette_sz as i32, (palette_sz as i32 * cell / maxtemp) + 1) as usize;
 
                 let color = if use_256 {
-                    // Use 256-color palette (x256 gradient)
                     let idx = unsafe { X256_PALETTE[color_idx] };
                     Color::AnsiValue(idx as u8)
                 } else {
-                    // Fallback to basic colors
                     match color_idx {
                         1 => Color::DarkGrey,
                         2 => Color::DarkRed,
@@ -335,14 +437,28 @@ fn printframe(
                         Print(ch),
                     )?;
                 } else {
+                    let bg = if unsafe { USE_TRUECOLOR } {
+                        Color::Rgb { r: 0, g: 0, b: 0 }
+                    } else {
+                        Color::AnsiValue(16)
+                    };
                     queue!(
                         stdout,
                         cursor::MoveTo(j as u16, i as u16),
                         SetForegroundColor(color),
-                        SetBackgroundColor(Color::Black),
+                        SetBackgroundColor(bg),
                         Print(ch),
                     )?;
                 }
+            }
+
+            if wide_char && cell > 0 && j + 1 < width {
+                if let Some(slot) = wide_cols_at(j) {
+                    *slot = 1;
+                }
+                j += 2;
+            } else {
+                j += 1;
             }
         }
     }
@@ -377,7 +493,10 @@ fn flames(
     loop {
         // Check for keypress
         if event::poll(Duration::from_millis(0))? {
-            if let Event::Key(KeyEvent { code, modifiers, .. }) = event::read()? {
+            if let Event::Key(KeyEvent {
+                code, modifiers, ..
+            }) = event::read()?
+            {
                 match code {
                     KeyCode::Char('q') | KeyCode::Char('Q') => break,
                     KeyCode::Char('c') if modifiers.contains(event::KeyModifiers::CONTROL) => break,
@@ -402,6 +521,7 @@ fn flames(
 
                     resize_array(&mut heater, WIDTH);
                     resize_array(&mut hotplate, WIDTH);
+                    ensure_wide_cols(WIDTH);
 
                     flip_grid(&mut field);
                     flip_grid(&mut count);
@@ -433,7 +553,23 @@ fn flames(
 fn main() -> io::Result<()> {
     let args = Args::parse();
 
-    let dispch = args.character.chars().next().unwrap_or('@');
+    let dispch = if let Some(ref val) = args.use_cool_unicode {
+        if !val.is_empty() {
+            match val.parse::<u8>().unwrap_or(1) {
+                1 => '🮿',
+                2 => '𜵯',
+                3 => '🮋',
+                4 => '𜺏',
+                _ => '🮿',
+            }
+        } else {
+            '🮿'
+        }
+    } else if args.chinese {
+        '炎'
+    } else {
+        args.character.chars().next().unwrap_or('@')
+    };
     let wolfrule = args.wolfrule;
     let maxtemp = args.temp;
     let frameperiod = if args.framerate < 1 {
@@ -450,7 +586,14 @@ fn main() -> io::Result<()> {
         HEIGHT = height;
     }
 
-    flames(dispch, wolfrule, maxtemp, frameperiod, random_mode, no_background)?;
+    flames(
+        dispch,
+        wolfrule,
+        maxtemp,
+        frameperiod,
+        random_mode,
+        no_background,
+    )?;
 
     restore_terminal(no_background)?;
 
