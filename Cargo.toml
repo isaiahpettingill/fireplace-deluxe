@@ -7,7 +7,19 @@ authors = ["isaiahpettingill <git.wolverine899@passfwd.com>"]
 license = "MIT"
 homepage = "https://github.com/isaiahpettingill/fireplace-deluxe"
 repository = "https://github.com/isaiahpettingill/fireplace-deluxe"
-exclude = ["Cargo.lock", "automata/**", "img/**"]
+exclude = [
+    "Cargo.lock",
+    "automata/**",
+    "img/**",
+    "demo.gif",
+    "demo.webm",
+    "fireplace.zip",
+    "Dockerfile",
+    "cross.dockerfile",
+    "Makefile",
+    "justfile",
+    ".niceheader",
+]
 
 [[bin]]
 name = "fireplace-deluxe"
