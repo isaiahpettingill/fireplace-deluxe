@@ -1,33 +1,41 @@
-# Fireplace
+# Fireplace Deluxe
 A cozy fireplace in your terminal, now ported to Rust
 
 ![A gif of what to expect](demo.gif?raw=true "Cozy")
 
+## Install
+
+```bash
+cargo install fireplace-deluxe
+```
+
 ## Build and Run
 
-### Build and Run
-* Install [Rust](https://www.rust-lang.org/tools/install)
-* `cargo build --release`
-* `./target/release/fireplace`
-
-### Options
+```bash
+cargo build --release
+./target/release/fireplace-deluxe
 ```
-Usage: ./fireplace [options]
-        -c character    An ASCII character to draw the flames. Default is '@'.
+
+## Options
+```
+Usage: fireplace-deluxe [options]
+        -c character    Character to draw the flames. Default is '@'.
         -h              Print this message.
         -f framerate    Set the framerate in frames/sec. Default is 20.
-                        A framerate of zero will make frames spit out as soon as they are ready.
         -t temp         Set the maximum temperature of the flames. Default is 10.
-                        A higher temp means taller flames. Press the up/down arrows
-                        to change the temperature at any time.
-        -r              print random characters
+        -w wolfram      Wolfram rule for flicker. Default is 60.
+        -r              Print random characters.
+        --no-background Disable black background.
+        -u [NUM]       Use decorative unicode (1: 🮿, 2: 𜵯, 3: 🮋, 4: 𜺏).
+                       Defaults to 1 if NUM not provided.
+        --chinese       Use Chinese character 炎.
 
-Press ^C or q at any time to douse the flames.^C
+Press ^C or q to exit. Use up/down arrows or j/k to change temperature.
 ```
 
-## Docker build and run
-* `docker build . -t fireplace:latest`
-* `docker run -it --rm fireplace`
-
-### Run with arguments:
-* `docker run -it --rm fireplace -t 7`
+## Docker
+```bash
+docker build . -t fireplace:latest
+docker run -it --rm fireplace
+docker run -it --rm fireplace -t 7
+```
