@@ -1,6 +1,6 @@
 [package]
 name = "fireplace-deluxe"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 description = "A cozy fireplace in your terminal"
 authors = ["isaiahpettingill <git.wolverine899@passfwd.com>"]
