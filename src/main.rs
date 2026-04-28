@@ -196,9 +196,12 @@ fn start_crossterm(no_background: bool) -> io::Result<(usize, usize)> {
     let use_truecolor = if env::consts::OS == "windows" {
         true
     } else {
-        env::var("TERM")
-            .map(|term| term.contains("truecolor") || term.contains("24bit"))
+        env::var("COLORTERM")
+            .map(|ct| ct.contains("truecolor") || ct.contains("24bit"))
             .unwrap_or(false)
+            || env::var("TERM")
+                .map(|term| term.contains("truecolor") || term.contains("24bit"))
+                .unwrap_or(false)
     };
 
     unsafe {
