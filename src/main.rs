@@ -392,6 +392,41 @@ const PALETTE_YELLOW: ColorPalette = ColorPalette {
     ],
 };
 
+// Magnesium: brilliant white flame, grey-white edge -> intense white core
+const PALETTE_MAGNESIUM: ColorPalette = ColorPalette {
+    x256: [
+        233, 234, 235, 236, 238, 240, 242, 245, 248, 250, 252, 254, 255, 231, 231, 231,
+    ],
+    ansi: [
+        Color::Black,
+        Color::DarkGrey,
+        Color::DarkGrey,
+        Color::Grey,
+        Color::Grey,
+        Color::White,
+        Color::White,
+        Color::White,
+    ],
+    rgb: [
+        Color::Rgb { r: 0, g: 0, b: 0 },
+        Color::Rgb { r: 8, g: 8, b: 8 },
+        Color::Rgb { r: 18, g: 18, b: 18 },
+        Color::Rgb { r: 34, g: 34, b: 34 },
+        Color::Rgb { r: 55, g: 55, b: 55 },
+        Color::Rgb { r: 78, g: 80, b: 82 },
+        Color::Rgb { r: 105, g: 108, b: 112 },
+        Color::Rgb { r: 135, g: 140, b: 145 },
+        Color::Rgb { r: 165, g: 172, b: 178 },
+        Color::Rgb { r: 195, g: 202, b: 208 },
+        Color::Rgb { r: 220, g: 226, b: 232 },
+        Color::Rgb { r: 238, g: 242, b: 247 },
+        Color::Rgb { r: 248, g: 250, b: 255 },
+        Color::Rgb { r: 252, g: 253, b: 255 },
+        Color::Rgb { r: 255, g: 255, b: 255 },
+        Color::Rgb { r: 255, g: 255, b: 255 },
+    ],
+};
+
 // Default palette
 static mut CURRENT_PALETTE: &'static ColorPalette = &PALETTE_RED;
 
@@ -824,6 +859,7 @@ fn main() -> io::Result<()> {
         "pink" => &PALETTE_PINK,
         "mauve" => &PALETTE_MAUVE,
         "yellow" => &PALETTE_YELLOW,
+        "magnesium" => &PALETTE_MAGNESIUM,
         _ => &PALETTE_RED,
     };
 
