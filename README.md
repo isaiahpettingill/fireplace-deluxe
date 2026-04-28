@@ -26,8 +26,9 @@ Usage: fireplace-deluxe [options]
         -w wolfram      Wolfram rule for flicker. Default is 60.
         -r              Print random characters.
         --no-background Disable black background.
-        -u              Use decorative unicode (🮿, 𜵯, 🮋, 𜺏).
-        -n NUM          Unicode character number (1-4). Default is 1.
+        -b, --background-flame  Use background colors for solid flame effect.
+        -u              Use decorative unicode (╬, ╳, ░, ▞, 🮿, 𜵯, 🮋, 𜺏).
+        -n NUM          Unicode character number (1-8). Default is 1.
 
 Press ^C or q to exit. Use up/down arrows or j/k to change temperature.
 ```

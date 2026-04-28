@@ -94,13 +94,17 @@ struct Args {
     #[arg(long)]
     no_background: bool,
 
-    /// Use decorative unicode (1: 🮿, 2: 𜵯, 3: 🮋, 4: 𜺏)
+    /// Use decorative unicode (1: ╬, 2: ╳, 3: ░, 4: ▞, 5: 🮿, 6: 𜵯, 7: 🮋, 8: 𜺏)
     #[arg(short = 'u', long = "use-cool-unicode")]
     use_cool_unicode: bool,
 
-    /// Unicode character number (1-4)
+    /// Unicode character number (1-8)
     #[arg(short = 'n', long = "unicode-num", default_value = "1")]
     unicode_num: u8,
+
+    /// Use background colors for flame effect (chars match background)
+    #[arg(short = 'b', long)]
+    background_flame: bool,
 }
 
 // Global state
@@ -368,6 +372,7 @@ fn printframe(
     maxtemp: i32,
     random_mode: bool,
     no_background: bool,
+    background_flame: bool,
 ) -> io::Result<()> {
     let mut stdout = io::stdout();
     let heightrecord = unsafe { HEIGHTRECORD };
@@ -391,7 +396,19 @@ fn printframe(
                         *slot = 0;
                     }
                 }
-                if no_background {
+                if background_flame {
+                    let bg = if unsafe { USE_TRUECOLOR } {
+                        Color::Rgb { r: 0, g: 0, b: 0 }
+                    } else {
+                        Color::AnsiValue(16)
+                    };
+                    queue!(
+                        stdout,
+                        cursor::MoveTo(j as u16, i as u16),
+                        SetBackgroundColor(bg),
+                        Print(' ')
+                    )?;
+                } else if no_background {
                     queue!(stdout, cursor::MoveTo(j as u16, i as u16), Print(' '))?;
                 } else {
                     let bg = if unsafe { USE_TRUECOLOR } {
@@ -432,7 +449,14 @@ fn printframe(
                     dispch
                 };
 
-                if no_background {
+                if background_flame {
+                    queue!(
+                        stdout,
+                        cursor::MoveTo(j as u16, i as u16),
+                        SetBackgroundColor(color),
+                        Print(' '),
+                    )?;
+                } else if no_background {
                     queue!(
                         stdout,
                         cursor::MoveTo(j as u16, i as u16),
@@ -478,6 +502,7 @@ fn flames(
     frameperiod: Duration,
     random_mode: bool,
     no_background: bool,
+    background_flame: bool,
 ) -> io::Result<()> {
     let width = unsafe { WIDTH };
     let height = unsafe { HEIGHT };
@@ -544,7 +569,7 @@ fn flames(
         }
 
         warm(&heater, &mut hotplate, maxtemp);
-        printframe(&field, dispch, maxtemp, random_mode, no_background)?;
+        printframe(&field, dispch, maxtemp, random_mode, no_background, background_flame)?;
         nextframe(&mut field, &mut count, &hotplate);
 
         std::thread::sleep(frameperiod);
@@ -558,11 +583,15 @@ fn main() -> io::Result<()> {
 
     let dispch = if args.use_cool_unicode {
         match args.unicode_num {
-            1 => '🮿',
-            2 => '𜵯',
-            3 => '🮋',
-            4 => '𜺏',
-            _ => '🮿',
+            1 => '╬',
+            2 => '╳',
+            3 => '░',
+            4 => '▞',
+            5 => '🮿',
+            6 => '𜵯',
+            7 => '🮋',
+            8 => '𜺏',
+            _ => '╬',
         }
     } else {
         args.character.chars().next().unwrap_or('@')
@@ -576,6 +605,7 @@ fn main() -> io::Result<()> {
     };
     let random_mode = args.random;
     let no_background = args.no_background;
+    let background_flame = args.background_flame;
 
     let (width, height) = start_crossterm(no_background)?;
     unsafe {
@@ -590,6 +620,7 @@ fn main() -> io::Result<()> {
         frameperiod,
         random_mode,
         no_background,
+        background_flame,
     )?;
 
     restore_terminal(no_background)?;
