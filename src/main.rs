@@ -2,7 +2,7 @@ use clap::Parser;
 use crossterm::{
     cursor,
     event::{self, Event, KeyCode, KeyEvent},
-    style::{Color, Print, SetForegroundColor},
+    style::{Color, Print, ResetColor, SetBackgroundColor, SetForegroundColor},
     terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
     execute, queue,
 };
@@ -59,6 +59,10 @@ struct Args {
     /// Print random characters
     #[arg(short = 'r')]
     random: bool,
+
+    /// Disable black background
+    #[arg(long)]
+    no_background: bool,
 }
 
 // Global state
@@ -109,9 +113,13 @@ const X256: [u8; 16] = [
 ];
 
 // Start terminal and initialize colors
-fn start_crossterm() -> io::Result<(usize, usize)> {
+fn start_crossterm(no_background: bool) -> io::Result<(usize, usize)> {
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, cursor::Hide)?;
+    if no_background {
+        execute!(stdout, EnterAlternateScreen, cursor::Hide)?;
+    } else {
+        execute!(stdout, EnterAlternateScreen, cursor::Hide, SetBackgroundColor(Color::Black))?;
+    }
     terminal::enable_raw_mode()?;
 
     let (cols, rows) = terminal::size()?;
@@ -145,9 +153,13 @@ fn start_crossterm() -> io::Result<(usize, usize)> {
 }
 
 // Restore terminal
-fn restore_terminal() -> io::Result<()> {
+fn restore_terminal(no_background: bool) -> io::Result<()> {
     let mut stdout = io::stdout();
-    execute!(stdout, cursor::Show, LeaveAlternateScreen)?;
+    if no_background {
+        execute!(stdout, cursor::Show, LeaveAlternateScreen)?;
+    } else {
+        execute!(stdout, cursor::Show, LeaveAlternateScreen, ResetColor)?;
+    }
     terminal::disable_raw_mode()?;
     Ok(())
 }
@@ -267,6 +279,7 @@ fn printframe(
     dispch: char,
     maxtemp: i32,
     random_mode: bool,
+    no_background: bool,
 ) -> io::Result<()> {
     let mut stdout = io::stdout();
     let heightrecord = unsafe { HEIGHTRECORD };
@@ -282,7 +295,11 @@ fn printframe(
         for j in 0..width {
             let cell = field.idx(i, j);
             if cell == 0 {
-                queue!(stdout, cursor::MoveTo(j as u16, i as u16), Print(' '))?;
+                if no_background {
+                    queue!(stdout, cursor::MoveTo(j as u16, i as u16), Print(' '))?;
+                } else {
+                    queue!(stdout, cursor::MoveTo(j as u16, i as u16), SetBackgroundColor(Color::Black), Print(' '))?;
+                }
             } else {
                 let color_idx = min(palette_sz as i32, (palette_sz as i32 * cell / maxtemp) + 1) as usize;
 
@@ -310,12 +327,22 @@ fn printframe(
                     dispch
                 };
 
-                queue!(
-                    stdout,
-                    cursor::MoveTo(j as u16, i as u16),
-                    SetForegroundColor(color),
-                    Print(ch),
-                )?;
+                if no_background {
+                    queue!(
+                        stdout,
+                        cursor::MoveTo(j as u16, i as u16),
+                        SetForegroundColor(color),
+                        Print(ch),
+                    )?;
+                } else {
+                    queue!(
+                        stdout,
+                        cursor::MoveTo(j as u16, i as u16),
+                        SetForegroundColor(color),
+                        SetBackgroundColor(Color::Black),
+                        Print(ch),
+                    )?;
+                }
             }
         }
     }
@@ -331,6 +358,7 @@ fn flames(
     mut maxtemp: i32,
     frameperiod: Duration,
     random_mode: bool,
+    no_background: bool,
 ) -> io::Result<()> {
     let width = unsafe { WIDTH };
     let height = unsafe { HEIGHT };
@@ -393,7 +421,7 @@ fn flames(
         }
 
         warm(&heater, &mut hotplate, maxtemp);
-        printframe(&field, dispch, maxtemp, random_mode)?;
+        printframe(&field, dispch, maxtemp, random_mode, no_background)?;
         nextframe(&mut field, &mut count, &hotplate);
 
         std::thread::sleep(frameperiod);
@@ -414,16 +442,17 @@ fn main() -> io::Result<()> {
         Duration::from_micros(1_000_000 / args.framerate as u64)
     };
     let random_mode = args.random;
+    let no_background = args.no_background;
 
-    let (width, height) = start_crossterm()?;
+    let (width, height) = start_crossterm(no_background)?;
     unsafe {
         WIDTH = width;
         HEIGHT = height;
     }
 
-    flames(dispch, wolfrule, maxtemp, frameperiod, random_mode)?;
+    flames(dispch, wolfrule, maxtemp, frameperiod, random_mode, no_background)?;
 
-    restore_terminal()?;
+    restore_terminal(no_background)?;
 
     // Clear screen on exit
     let mut stdout = io::stdout();
